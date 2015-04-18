@@ -1,22 +1,31 @@
-class dnsmasq {
+class dnsmasq
+(
+  $confs        = {},
+  $tag          = 'dnsmasq-host',
+  $storeconfigs = true,
+) {
   include dnsmasq::params
 
   anchor { 'dnsmasq::start': }
 
-  class { 'dnsmasq::install': require => Anchor['dnsmasq::start'], }
-
-  class { 'dnsmasq::config': require => Class['dnsmasq::install'], }
-
-  class { 'dnsmasq::service':
-    subscribe => Class['dnsmasq::install', 'dnsmasq::config'],
+  class { 'dnsmasq::install':
+    require => Anchor['dnsmasq::start'],
   }
 
-  class { 'dnsmasq::reload':
+  class { 'dnsmasq::service':
+    subscribe => [
+      Class['dnsmasq::install'],
+      Class['dnsmasq::config'],
+    },
+  }
+
+  anchor { 'dnsmasq::end':
     require => Class['dnsmasq::service'],
   }
 
-  anchor { 'dnsmasq::end': require => Class['dnsmasq::service'], }
-  if $::settings::storeconfigs {
-    File_line <<| tag == 'dnsmasq-host' |>>
+  create_resources( dnsmasq::conf, $confs )
+
+  if $storeconfigs {
+    Dnsmasq::Conf <<| tag == $tag |>>
   }
 }
